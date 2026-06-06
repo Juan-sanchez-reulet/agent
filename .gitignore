@@ -1,0 +1,6 @@
+.env
+session.pkl
+notified.json
+*.log
+__pycache__/
+*.pyc
