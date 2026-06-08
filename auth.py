@@ -100,8 +100,17 @@ def login(session: requests.Session) -> None:
 def get_authenticated_session(appointment_url: str) -> requests.Session:
     session = _load_session()
 
-    # Quick probe to check if session is still valid
-    resp = session.get(appointment_url, headers=HEADERS, allow_redirects=True)
+    # Quick probe — retry up to 3 times on network errors
+    resp = None
+    for attempt in range(1, 4):
+        try:
+            resp = session.get(appointment_url, headers=HEADERS, allow_redirects=True)
+            break
+        except Exception as e:
+            if attempt == 3:
+                raise
+            print(f"[WARN] Network error on probe (attempt {attempt}/3): {e}")
+            time.sleep(30 * attempt)
 
     if is_authenticated(resp):
         return session
