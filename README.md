@@ -1,86 +1,137 @@
-# Visa Appointment Monitor
+# Monitor de Citas — Embajada de EEUU en Madrid
 
-Monitors the US Embassy Madrid appointment page every 5 minutes and sends an email alert when a slot opens before September 17, 2026.
+Este script revisa automáticamente cada 5 minutos si hay citas disponibles antes del 17 de septiembre y te manda una notificación al móvil + un email en cuanto aparezca un hueco.
 
-## Setup
+---
 
-### 1. Install dependencies
+## Lo que necesitas antes de empezar
+
+- Tu cuenta de [ais.usvisa-info.com](https://ais.usvisa-info.com/en-es/niv) (el email y contraseña con los que reservas la cita)
+- Una cuenta de Gmail
+- La app **ntfy** instalada en tu móvil
+
+---
+
+## Instalación (5 minutos)
+
+### 1. Descarga el proyecto
+
+Abre el Terminal (`Cmd + Espacio`) y pega esto:
 
 ```bash
-cd /Users/lucassanchez/Desktop/casa/agent
-pip install -r requirements.txt
-playwright install chromium  # only needed for JS fallback
+cd ~/Desktop && git clone https://github.com/Juan-sanchez-reulet/agent.git visa-monitor && cd visa-monitor
 ```
 
-### 2. Configure credentials
+> Si no tienes git instalado, te pedirá instalarlo — acepta.
+
+### 2. Instala las dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Crea tu archivo de configuración
 
 ```bash
 cp .env.example .env
+open -e .env
 ```
 
-Edit `.env` and fill in:
+Se abrirá un archivo de texto. Rellena cada línea con tus datos:
 
-| Variable | Value |
-|---|---|
-| `VISA_EMAIL` | Your email for ais.usvisa-info.com |
-| `VISA_PASSWORD` | Your password for ais.usvisa-info.com |
-| `GMAIL_APP_PASSWORD` | 16-char Google App Password (see below) |
-| `NOTIFY_EMAIL` | Where to send alerts (your Gmail) |
-| `TARGET_DATE` | `2026-09-17` |
-| `APPOINTMENT_URL` | Leave as-is |
+```
+VISA_EMAIL=          ← tu email de ais.usvisa-info.com
+VISA_PASSWORD=       ← tu contraseña de ais.usvisa-info.com
+GMAIL_APP_PASSWORD=  ← ver paso 4
+NOTIFY_EMAIL=        ← el email donde quieres recibir las alertas
+TARGET_DATE=2026-09-16
+APPOINTMENT_URL=https://ais.usvisa-info.com/en-es/niv/schedule/TU_ID/appointment?confirmed_limit_message=1&commit=Continue
+NTFY_TOPIC=         ← un nombre único cualquiera, ej: visa-madrid-maria-2026
+```
 
-#### Getting a Gmail App Password
+> **¿Cuál es tu APPOINTMENT_URL?** Entra en ais.usvisa-info.com, inicia sesión, ve a "Schedule Appointment" y copia la URL de la barra del navegador.
 
-1. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-2. Select "Mail" + "Mac" → Generate
-3. Copy the 16-character password into `GMAIL_APP_PASSWORD`
+Guarda el archivo (`Cmd + S`) y ciérralo.
 
-> You need 2-Step Verification enabled on your Google account for App Passwords to work.
+### 4. Genera tu contraseña de Gmail para la app
 
-### 3. Test it manually
+1. Ve a [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) con tu cuenta de Gmail
+   > Si no te aparece esta opción, primero activa la verificación en dos pasos en [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Pon cualquier nombre (ej. "visa-monitor") y haz clic en **Crear**
+3. Copia las 16 letras que aparecen y pégalas en el `.env` donde pone `GMAIL_APP_PASSWORD=`
+
+### 5. Configura la app ntfy en el móvil
+
+1. Abre la app ntfy
+2. Toca el **+** y suscríbete al topic que pusiste en `NTFY_TOPIC=` (ej. `visa-madrid-maria-2026`)
+3. Para que suene aunque el móvil esté en silencio:
+   - **iOS:** Ajustes → Ntfy → Notificaciones → activa **"Notificaciones de tiempo crítico"**
+   - **Android:** mantén pulsada la notificación de ntfy → activar sonido de alarma
+
+---
+
+## Prueba que todo funciona
+
+Pega esto en el Terminal:
 
 ```bash
-cd /Users/lucassanchez/Desktop/casa/agent
-python3 monitor.py
+TARGET_DATE=2026-12-31 python3 monitor.py
 ```
 
-You should see a line like:
+Deberías ver algo así:
 ```
-[2026-06-06 12:00:00] No slots available before 2026-09-17
+[ALERT] Push notification sent to ntfy topic: visa-madrid-maria-2026
+[ALERT] Email sent — available dates: 2026-09-28, 2026-10-01, ...
 ```
 
-### 4. Install the background job (runs every 5 min, 24/7)
+Y en tu móvil llegará una notificación y en tu email una alerta. Si ves eso, **todo está funcionando**.
+
+---
+
+## Activa el monitor 24/7
+
+Para que corra solo en segundo plano sin que tengas que hacer nada:
 
 ```bash
 cp com.visa.monitor.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.visa.monitor.plist
 ```
 
-### 5. Verify it's running
+Para comprobar que está activo:
 
 ```bash
 launchctl list | grep visa
 ```
 
-You should see `com.visa.monitor` in the output.
+Si ves `com.visa.monitor` en el resultado, está corriendo. Puedes cerrar el Terminal.
 
-Watch the logs:
+---
+
+## ¿Cómo sé que sigue funcionando?
+
+Puedes ver el historial de chequeos en cualquier momento:
+
 ```bash
-tail -f ~/Library/Logs/visa-monitor.log
+tail -50 ~/Library/Logs/visa-monitor.log
 ```
 
-## Stopping the monitor
+Verás una línea cada 5 minutos. Mientras aparezcan líneas nuevas, el monitor está activo.
+
+---
+
+## Pararlo cuando ya no lo necesites
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.visa.monitor.plist
 ```
 
-## How it works
+---
 
-1. Loads your session cookies (or logs in fresh if expired)
-2. Fetches the appointment page
-3. Parses the calendar for available dates before Sep 17
-4. If slots found → sends you an email alert with the dates and a direct booking link
-5. Logs the result and exits (launchd restarts it in 5 minutes)
+## Algo no funciona
 
-The email deduplication prevents spam: if the same slots are still available, you only get one email per hour.
+| Error | Solución |
+|---|---|
+| `AUTH ERROR` | Revisa tu email y contraseña de usvisa en el `.env` |
+| `NOTIFY ERROR: BadCredentials` | El `GMAIL_APP_PASSWORD` no es correcto, genera uno nuevo |
+| `No slots available` | Normal — significa que no hay huecos aún, sigue esperando |
+| Push no llega al móvil | Comprueba que el topic en la app ntfy coincide exactamente con el del `.env` |
