@@ -7,12 +7,12 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/anaconda3/bin/python3</string>
-        <string>/Users/lucassanchez/Desktop/casa/agent/monitor.py</string>
+        <string>PYTHON_PATH</string>
+        <string>INSTALL_DIR/monitor.py</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/lucassanchez/Desktop/casa/agent</string>
+    <string>INSTALL_DIR</string>
 
     <key>StartInterval</key>
     <integer>300</integer>
@@ -21,15 +21,15 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/Users/lucassanchez/Library/Logs/visa-monitor.log</string>
+    <string>HOME_DIR/Library/Logs/visa-monitor.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/lucassanchez/Library/Logs/visa-monitor.log</string>
+    <string>HOME_DIR/Library/Logs/visa-monitor.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/opt/anaconda3/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>PYTHON_BIN_DIR:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
 </dict>
 </plist>
