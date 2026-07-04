@@ -21,18 +21,24 @@ The monitor uses **authenticated session scraping with CSRF handling, cookie per
 
 ### Requirements
 
-- macOS with Python 3.10+
+- macOS or Windows with Python 3.10+
 - A [ais.usvisa-info.com](https://ais.usvisa-info.com) account with a pending appointment
 - A Gmail account
 - The **ntfy** app on your phone ([iOS](https://apps.apple.com/app/ntfy/id1625396347) / [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy))
 
 ### 1. Clone the repo
 
-Open Terminal (`Cmd + Space`, type "Terminal") and run:
-
+**macOS** — open Terminal (`Cmd + Space`, type "Terminal"):
 ```bash
 cd ~/Desktop && git clone https://github.com/Juan-sanchez-reulet/agent.git visa-monitor && cd visa-monitor
 ```
+
+**Windows** — open PowerShell:
+```powershell
+cd $env:USERPROFILE\Desktop; git clone https://github.com/Juan-sanchez-reulet/agent.git visa-monitor; cd visa-monitor
+```
+
+> If git is not installed, download it from [git-scm.com](https://git-scm.com/download/win) (Windows) or accept the prompt (macOS).
 
 ### 2. Install dependencies
 
@@ -42,17 +48,30 @@ pip install -r requirements.txt
 
 ### 3. Configure
 
+**macOS:**
 ```bash
 cp .env.example .env
 open -e .env
+```
+
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
+notepad .env
 ```
 
 Fill in each value — see the [Configuration](#configuration) section below. Save and close.
 
 ### 4. Test it
 
+**macOS:**
 ```bash
 TARGET_DATE=2026-12-31 python3 monitor.py
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:TARGET_DATE="2026-12-31"; python monitor.py
 ```
 
 You should see:
@@ -65,16 +84,30 @@ A push notification will arrive on your phone and an email in your inbox.
 
 ### 5. Install the background service
 
+**macOS:**
 ```bash
 bash install.sh
 ```
+This installs a `launchd` job that runs every 5 minutes, survives reboots, and logs to `~/Library/Logs/visa-monitor.log`.
 
-This installs a `launchd` job that runs every 5 minutes automatically, survives reboots, and logs to `~/Library/Logs/visa-monitor.log`.
+**Windows** — run PowerShell as Administrator, then:
+```powershell
+.\install-windows.ps1
+```
+This installs a Windows Task Scheduler job that runs every 5 minutes and logs to `%USERPROFILE%\AppData\Local\Logs\visa-monitor.log`.
 
 **Verify it's running:**
+
+macOS:
 ```bash
 launchctl list | grep visa
 tail -f ~/Library/Logs/visa-monitor.log
+```
+
+Windows:
+```powershell
+Get-ScheduledTask -TaskName "VisaAppointmentMonitor"
+Get-Content "$env:USERPROFILE\AppData\Local\Logs\visa-monitor.log" -Tail 20
 ```
 
 ### 6. Configure ntfy for silent/DND override
@@ -85,8 +118,14 @@ To receive alerts even when your phone is on silent:
 
 ### Stop the monitor
 
+**macOS:**
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.visa.monitor.plist
+```
+
+**Windows (PowerShell):**
+```powershell
+Unregister-ScheduledTask -TaskName "VisaAppointmentMonitor" -Confirm:$false
 ```
 
 ---
